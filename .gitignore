@@ -10,3 +10,6 @@ bin/
 # VS Code — 팀 공통 설정(settings·extensions·launch·tasks)은 커밋한다
 .vscode/*.local.json
 .DS_Store
+
+# Claude Code 로컬 세션 상태 — 권한 캐시에 실행한 명령(키 포함 가능)이 그대로 남는다
+.claude/
