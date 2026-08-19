@@ -1,0 +1,26 @@
+{
+  // F5 로 실행·디버그한다.
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "ch02_layered (셸 환경변수)",
+      "request": "launch",
+      "mainClass": "com.skala.ch02.Ch02Application",
+      "projectName": "ch02_layered",
+      "vmArgs": "-Dfile.encoding=UTF-8",
+      "env": {
+        "OPENAI_API_KEY": "${env:OPENAI_API_KEY}"
+      }
+    },
+    {
+      "type": "java",
+      "name": "ch02_layered (.env)",
+      "request": "launch",
+      "mainClass": "com.skala.ch02.Ch02Application",
+      "projectName": "ch02_layered",
+      "vmArgs": "-Dfile.encoding=UTF-8",
+      "envFile": "${workspaceFolder}/.env"
+    }
+  ]
+}
