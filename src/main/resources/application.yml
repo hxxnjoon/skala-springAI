@@ -13,7 +13,7 @@ spring:
           temperature: 0.7
       embedding:
         options:
-          model: text-embedding-3-small
+          model: text-embedding-3-large
 
     # 운영에서는 프롬프트 원문 로깅을 반드시 끈다(개인정보가 그대로 쌓인다).
     chat:

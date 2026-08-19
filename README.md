@@ -1,6 +1,8 @@
-# ch02_layered — 교재 1장 · 계층 구조 (API 키 불필요)
+# ch02_layered — 교재 1장 · 계층 구조 + Day1·Day2 실습
 
-Controller · Service · Repository · Mapper. AI 를 전혀 쓰지 않는다 — **키도, 비용도 없다.**
+Controller · Service · Repository · Mapper. 기본 계층 구조는 AI 를 전혀 쓰지 않는다 — **키도, 비용도 없다.**
+Day1 실습(`/lab1/**`)은 `ChatClient` 로 주문을 요약하고, Day2 실습(`/lab2/**`)은
+사내 정책 문서를 인제스트해 근거 기반으로 답하는 RAG 를 붙인다.
 
 **혼자 돈다.** 이 폴더만 열어 `./gradlew bootRun` 하면 끝이고, 다른 장 폴더를 참조하지 않는다.
 
@@ -9,17 +11,24 @@ Controller · Service · Repository · Mapper. AI 를 전혀 쓰지 않는다 �
 ## 실행
 
 ```bash
+export OPENAI_API_KEY="sk-..."   # Day1·Day2 실습(/lab1/**, /lab2/**)에서만 필요 — 소스·깃에 절대 커밋하지 않는다
 ./gradlew bootRun          # http://localhost:8080
 ```
 
 - Swagger UI — <http://localhost:8080/swagger-ui.html> ([Try it out] 으로 curl 없이 호출)
 - 포트를 바꾸려면 `./gradlew bootRun --args='--server.port=8081'`
 
-> **API 키가 필요 없다.** 모델을 부르지 않으므로 비용도 들지 않는다.
+> **`/ch02/**` 는 키가 없어도 전부 동작한다.** 모델을 부르지 않으므로 비용도 들지 않는다.
+> `/lab1/**`·`/lab2/**` 만 `OPENAI_API_KEY` 가 필요하고, 없어도 앱은 뜬다(`${OPENAI_API_KEY:not-set}`) —
+> 실제로 모델(요약·임베딩·질의응답)을 부르는 순간에만 실패한다. `/lab1/**` 는 실패해도
+> 대체 응답이 내려가지만, `/lab2/**` 는 검색(`/lab2/retrieve`)과 인제스트(`/lab2/ingest`)
+> 자체가 임베딩 모델을 쓰므로 키가 없으면 이 두 엔드포인트부터 실패한다.
 
 ---
 
 ## 무엇이 들어 있나
+
+### 계층 구조 예제 (`/ch02/**`, AI 없음)
 
 | 파일 | 무엇을 보나 |
 | --- | --- |
@@ -35,7 +44,48 @@ Controller · Service · Repository · Mapper. AI 를 전혀 쓰지 않는다 �
 | `dto/OrderDtos.java` | 요청·응답 record + 검증 규칙 + `@Schema` |
 | `resources/mapper/OrderMapper.xml` | 동적 SQL — `<where>` · `<if>` · `<choose>` |
 
-핵심 규칙 네 가지가 코드로 드러나 있다.
+### Day1 실습 — AI 주문 요약 (`/lab1/**`)
+
+| 파일 | 무엇을 보나 |
+| --- | --- |
+| `day1/web/OrderSummaryController.java` | `GET /lab1/orders/{orderId}/summary` — 본인 주문만 요약 |
+| `day1/service/OrderSummaryService.java` | 기존 `OrderRepository` 재사용 + `ChatClient` 호출 |
+| `day1/config/Lab1AiConfig.java` | 요약 전용 `ChatClient` — `temperature 0`, `maxTokens 120` |
+| `day1/web/Lab1ExceptionHandler.java` | 예외 → 응답 변환(1장 규칙을 Day1 에도 그대로 적용) |
+| `day1/dto/SummaryResponse.java` · `ErrorResponse.java` | 응답 DTO |
+
+`OrderSummaryService` 는 모델 호출이 실패해도 예외를 던지지 않는다 — 주문 품목·상태로
+즉시 대체 응답을 만들어 **AI 가 죽어도 화면은 죽지 않는다.**
+
+### Day2 실습 — 사내 문서 Q&A, RAG (`/lab2/**`)
+
+| 파일 | 무엇을 보나 |
+| --- | --- |
+| `lab2/web/Lab2RagController.java` | `POST /lab2/ingest` · `GET /lab2/retrieve` · `GET /lab2/ask` |
+| `lab2/service/Lab2IngestService.java` | 읽기(`TextReader`) → 분할(`TokenTextSplitter`) → **메타데이터** → 저장. 재인제스트 시 같은 출처를 지우고 다시 넣어 중복 방지 |
+| `lab2/service/Lab2RagService.java` | 유사도 검색(`similarityThreshold`) + 근거 기반 답변(`ChatClient.entity()`) |
+| `lab2/config/Lab2VectorStoreConfig.java` | 인메모리 `SimpleVectorStore` |
+| `lab2/config/Lab2AiConfig.java` | 답변 전용 `ChatClient` — `temperature 0`(근거가 같으면 답도 같아야 한다) |
+| `lab2/web/Lab2ExceptionHandler.java` | 예외 → 응답 변환(`/lab2/**` 로 스코프 한정) |
+| `resources/lab2-docs/*.md` | 실습용 샘플 규정 문서(배송·반품·멤버십) |
+| `test/resources/lab2/golden.json` | 정답이 정해진 평가 질문 10개(§ 골든셋 평가 참고) |
+
+**인제스트 때 안 넣은 메타데이터는 나중에 넣을 수 없다.** `source`·`version` 을 이때 붙여
+두면 재인덱싱(같은 `source` 를 지우고 다시 넣기)과 답변의 출처 표기가 전부 여기서 나온다.
+근거 문서가 하나도 안 잡히면(`retrieve` 결과가 비면) **모델을 아예 부르지 않고** 곧바로
+"확인되지 않습니다"로 응답한다 — 근거 없는 질문에 모델이 그럴듯하게 지어내는 것을 원천 차단한다.
+
+> **점수 하나로 근거 있음/없음을 완벽히 가를 순 없다.** `SimpleVectorStore` 가 주는 원본
+> 코사인 유사도는 이 코퍼스에서 0.4~0.6대에 머문다 — 흔히 보는 "0.7~0.8 이상이면 확실한
+> 근거" 감각과 안 맞아서, `Lab2RagService.toDisplayScore()` 로 `(1+cosine)/2` 재스케일한
+> 값(0~1)을 기준으로 표시·threshold 판단을 한다. threshold 는 과제 기준선인 **0.5**.
+> 문서가 3개뿐인 작은 코퍼스라 관련 없는 질문도 같은 매장 도메인 어휘가 겹치면 재스케일
+> 점수가 0.7 안팎으로 나와("우주 배송도 되나요") threshold 만으로 완전히 걸러지진 않는다 —
+> 그래서 진짜 판단은 시스템 프롬프트("근거에 없으면 확인되지 않습니다")로 모델이 한다.
+> 임베딩 모델도 `text-embedding-3-small` → `text-embedding-3-large` 로 올렸다 — 정답
+> 청크가 더 안정적으로 상위 순위에 오도록.
+
+핵심 규칙 네 가지가 계층 구조 예제(`/ch02/**`) 코드로 드러나 있다.
 
 1. **위에서 아래로만 호출** — 컨트롤러는 Repository·Mapper 를 모른다. 서비스만 안다.
 2. **권한 조건은 쿼리 안에** — `findByIdAndOwnerId()`, XML 에서는 `<if>` **밖**에.
@@ -92,6 +142,24 @@ curl 'localhost:8080/ch02/orders/search?userId=user1&sort=id;drop%20table%20orde
 
 # 집계 — SQL 한 번으로 상태별 건수·합계
 curl 'localhost:8080/ch02/orders/statistics?userId=user1'
+
+# Day1 — 본인 주문 한 문장 요약(모델 호출, OPENAI_API_KEY 필요)
+curl 'localhost:8080/lab1/orders/12345/summary?userId=user1'
+#   {"orderId":"12345","summary":"무선 이어폰이 배송 중이며 ..."}
+
+# Day2 — ① 먼저 문서를 인제스트한다(임베딩 호출, OPENAI_API_KEY 필요)
+curl -X POST localhost:8080/lab2/ingest
+#   [{"source":"return-policy","chunks":3}, {"source":"shipping-policy","chunks":3}, {"source":"membership","chunks":3}]
+
+# Day2 — ② 검색만 따로 본다 — score 는 (1+cosine)/2 재스케일 값, threshold 0.5
+curl 'localhost:8080/lab2/retrieve?q=제주도 배송비'
+
+# Day2 — ③ 근거로 답하게 한다 — answer 와 함께 sources(출처 파일명)가 나온다
+curl 'localhost:8080/lab2/ask?q=단순 변심 반품은 며칠 이내인가요'
+
+# Day2 — ④ 문서에 없는 것을 물으면 모델을 부르지 않고 곧바로 답한다
+curl 'localhost:8080/lab2/ask?q=우주 배송도 되나요'
+#   {"answer":"확인되지 않습니다.","sources":[],"grounded":false}
 ```
 
 **콘솔에 찍히는 SQL 을 꼭 보라.** `show-sql` 을 켜 두었다.
@@ -121,6 +189,25 @@ DB 를 직접 들여다보려면 <http://localhost:8080/h2-console>
 
 같은 요청이 **`http/ch02_layered.http`** 에 들어 있다 — VS Code 의 REST Client 확장에서
 각 요청 위의 **[Send Request]** 를 누르면 curl 없이 응답을 볼 수 있다.
+
+### 골든셋 평가 (Day2, 모델을 실제로 호출한다 — 비용 발생)
+
+```bash
+export OPENAI_API_KEY="sk-..."
+./gradlew test -Peval        # Lab2GoldenSetEvalTest 만 추가로 실행
+```
+
+`Lab2GoldenSetEvalTest` 는 `@Tag("eval")` 이 붙어 있어 **기본 `./gradlew test` 에서는
+아예 실행되지 않는다**(discovery 단계에서 제외되어 임베딩·모델 호출이 전혀 일어나지 않는다).
+`-Peval` 로 실행하면 `src/test/resources/lab2/golden.json` 의 질문 10개를 차례로 물어보고,
+답변에 `must` 키워드가 모두 들어 있는지 · 근거가 있는 질문은 `sources` 에 해당 문서명이
+찍히는지를 확인해 **10개 중 8개 이상 통과**해야 한다. 실패한 문항은 질문·답변·출처를
+로그로 남긴다 — **느낌으로 고치지 말고 실패한 질문의 답을 반드시 읽는다.**
+
+- "물건 돌려보내려면 며칠 안에 해야 해요?" 처럼 표현을 바꾼 질문도 들어 있다 —
+  검색이 표현에 얼마나 흔들리는지 보는 문항이다.
+- "우주 배송도 되나요?" 는 문서에 없는 질문이다 — 지어내지 않고 "확인되지 않습니다"로
+  답하는지가 핵심이다(`src: null`).
 
 ---
 

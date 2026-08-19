@@ -39,6 +39,8 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     // ── Spring AI ─────────────────────────────────────────────
     implementation 'org.springframework.ai:spring-ai-starter-model-openai'
+    // Day2 실습 — RAG 인메모리 VectorStore(SimpleVectorStore)
+    implementation 'org.springframework.ai:spring-ai-vector-store'
 
     // ── 계층 구조 예제용 저장소 ────────────────────────────────
     // H2 는 인메모리라 별도 설치 없이 그대로 뜬다.
@@ -58,6 +60,14 @@ dependencyManagement {
     imports { mavenBom "org.springframework.ai:spring-ai-bom:${springAiVersion}" }
 }
 
-tasks.named('test') { useJUnitPlatform() }
+tasks.named('test') {
+    useJUnitPlatform {
+        // 모델을 실제로 호출하는 골든셋 평가는 비용이 들어 기본 실행에서 뺀다.
+        // 포함하려면: ./gradlew test -Peval
+        if (!project.hasProperty('eval')) {
+            excludeTags 'eval'
+        }
+    }
+}
 
 springBoot { mainClass = 'com.skala.ch02.Ch02Application' }

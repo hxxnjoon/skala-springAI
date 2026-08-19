@@ -1,6 +1,7 @@
-### ch02_layered — 교재 1장 · 계층 구조 (API 키 불필요)
+### ch02_layered — 교재 1장 · 계층 구조 + Day1·Day2 실습
 ### VS Code 의 REST Client 확장에서 각 요청 위 [Send Request] 를 누른다.
 ### 먼저 ./gradlew bootRun 으로 앱을 띄운다.
+### ch02/** 는 API 키가 필요 없다. lab1/**·lab2/** 는 OPENAI_API_KEY 가 필요하다(모델 호출).
 
 @host = http://localhost:8080
 
@@ -36,3 +37,21 @@ GET http://localhost:8080/ch02/orders/search?userId=user1&sort=id;drop table ord
 
 ### 집계 — SQL 한 번으로
 GET http://localhost:8080/ch02/orders/statistics?userId=user1
+
+### Day1 — 본인 주문 한 문장 요약 (모델 호출, OPENAI_API_KEY 필요)
+GET http://localhost:8080/lab1/orders/12345/summary?userId=user1
+
+### Day2 — ① 샘플 정책 문서 인제스트 (임베딩 호출, OPENAI_API_KEY 필요)
+POST http://localhost:8080/lab2/ingest
+
+### Day2 — ② 검색만 따로 본다 — 점수가 낮으면 근거로 안 쓴다
+GET http://localhost:8080/lab2/retrieve?q=제주도 배송비
+
+### Day2 — ③ 같은 질문, 표현만 다르게 — 검색이 흔들리지 않아야 한다
+GET http://localhost:8080/lab2/retrieve?q=물건 돌려보내려면 며칠 안에 해야 해요
+
+### Day2 — ④ 근거로 답한다 — answer·sources(출처)가 함께 나온다
+GET http://localhost:8080/lab2/ask?q=단순 변심 반품은 며칠 이내인가요
+
+### Day2 — ⑤ 문서에 없는 질문 — 지어내지 않고 "확인되지 않습니다"
+GET http://localhost:8080/lab2/ask?q=우주 배송도 되나요
