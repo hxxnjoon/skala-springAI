@@ -12,7 +12,7 @@ import com.skala.ch02.day1.dto.ErrorResponse;
 import com.skala.ch02.service.OrderNotFoundException;
 
 // ① 예외 → 응답 변환은 한 곳에서 (1장)
-@RestControllerAdvice
+@RestControllerAdvice(basePackages = "com.skala.ch02.day1.web") // /lab1/** 로만 한정 — 다른 실습의 예외까지 가로채지 않는다
 class Lab1ExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(Lab1ExceptionHandler.class);
