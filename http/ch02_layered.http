@@ -1,0 +1,38 @@
+### ch02_layered — 교재 1장 · 계층 구조 (API 키 불필요)
+### VS Code 의 REST Client 확장에서 각 요청 위 [Send Request] 를 누른다.
+### 먼저 ./gradlew bootRun 으로 앱을 띄운다.
+
+@host = http://localhost:8080
+
+### 본인 주문 — 200
+GET http://localhost:8080/ch02/orders/12345?userId=user1
+
+### 남의 주문 — 404
+GET http://localhost:8080/ch02/orders/99999?userId=user1
+
+### 목록
+GET http://localhost:8080/ch02/orders?userId=user1
+
+### 생성 — 201
+POST http://localhost:8080/ch02/orders?userId=user1
+Content-Type: application/json
+
+{"item":"모니터암","quantity":2,"memo":"빠른 배송"}
+
+### 검증 실패 — 400
+POST http://localhost:8080/ch02/orders?userId=user1
+Content-Type: application/json
+
+{"item":"","quantity":0}
+
+### 동적 조건 검색 — 조건을 넣었다 뺐다
+GET http://localhost:8080/ch02/orders/search?userId=user1
+
+###
+GET http://localhost:8080/ch02/orders/search?userId=user1&status=SHIPPING
+
+### 정렬은 화이트리스트 — 이상한 값도 기본 정렬로
+GET http://localhost:8080/ch02/orders/search?userId=user1&sort=id;drop table orders
+
+### 집계 — SQL 한 번으로
+GET http://localhost:8080/ch02/orders/statistics?userId=user1

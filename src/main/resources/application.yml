@@ -1,0 +1,84 @@
+spring:
+  application:
+    name: ch02_layered
+
+  ai:
+    openai:
+      # 키는 소스에 넣지 않는다.  export OPENAI_API_KEY="sk-..."
+      # 기본값이 있어 키가 없어도 앱은 뜬다 — 실제 모델 호출 시점에만 401 이 난다.
+      api-key: ${OPENAI_API_KEY:not-set}
+      chat:
+        options:
+          model: gpt-4o-mini
+          temperature: 0.7
+      embedding:
+        options:
+          model: text-embedding-3-small
+
+    # 운영에서는 프롬프트 원문 로깅을 반드시 끈다(개인정보가 그대로 쌓인다).
+    chat:
+      observations:
+        log-prompt: false
+      client:
+        observations:
+          log-prompt: false
+
+  # ── 계층 구조 예제용 DB ────────────────────────────────────
+  # H2 인메모리라 별도 설치가 필요 없다. 앱을 끄면 데이터도 사라진다.
+  datasource:
+    url: jdbc:h2:mem:ch02;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+  jpa:
+    hibernate:
+      ddl-auto: create-drop     # 실무에선 절대 쓰지 않는다(Flyway·Liquibase 사용)
+    open-in-view: false         # 뷰까지 영속성 컨텍스트를 열어 두지 않는다
+    show-sql: true              # 학습용 — 생성된 SQL 에 owner_id 조건이 보인다
+    properties:
+      hibernate:
+        format_sql: true
+  h2:
+    console:
+      enabled: true             # http://localhost:8080/h2-console
+      path: /h2-console
+
+server:
+  port: 8080
+
+# ── API 문서 · Swagger UI ──────────────────────────────────
+#   화면 http://localhost:8080/swagger-ui.html   문서 /v3/api-docs
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: alpha
+    tags-sorter: alpha
+    display-request-duration: true
+    doc-expansion: none
+  default-produces-media-type: application/json
+
+# ── Mapper 계층(MyBatis) ────────────────────────────────────
+# 같은 DataSource 를 JPA 와 나눠 쓴다. 쓰기는 JPA, 화면용 검색·집계는 Mapper.
+mybatis:
+  mapper-locations: classpath:mapper/*.xml    # XML SQL 을 두는 자리
+  configuration:
+    map-underscore-to-camel-case: true        # ordered_at → orderedAt
+    arg-name-based-constructor-auto-mapping: true   # record 생성자에 이름으로 바인딩
+    default-fetch-size: 100
+    # 학습용 — 실행된 SQL 과 바인딩 값이 로그에 보인다(운영에서는 끈다).
+    # log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  metrics:
+    tags:
+      application: ch02_layered
+
+logging:
+  level:
+    com.skala.ch02: DEBUG
