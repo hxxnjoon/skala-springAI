@@ -41,6 +41,8 @@ dependencies {
     implementation 'org.springframework.ai:spring-ai-starter-model-openai'
     // Day2 실습 — RAG 인메모리 VectorStore(SimpleVectorStore)
     implementation 'org.springframework.ai:spring-ai-vector-store'
+    // Day3 실습 — QuestionAnswerAdvisor(RAG를 Advisor 체인에 결합)
+    implementation 'org.springframework.ai:spring-ai-advisors-vector-store'
 
     // ── 계층 구조 예제용 저장소 ────────────────────────────────
     // H2 는 인메모리라 별도 설치 없이 그대로 뜬다.
